@@ -2,9 +2,9 @@ use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     msg,
+    program_error::ProgramError,
     pubkey::Pubkey,
 };
-use solana_sdk::program_error::ProgramError;
 
 use crate::instruction::EscrowInstruction;
 
@@ -32,9 +32,9 @@ impl Processor {
         program_id: &Pubkey,
     ) -> ProgramResult {
         let account_info_iter = &mut accounts.iter();
-        let initializer = next_account_info(account_info_iter);
+        let initializer = next_account_info(account_info_iter)?;
 
-        // initializer of the escrow has to sign
+        // initializer of the escrow has to sign the transaction
         if !initializer.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
