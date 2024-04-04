@@ -7,7 +7,7 @@ pub enum EscrowInstruction {
     /// and transferring ownership of the given temporary token account
     /// to the PDA
     ///
-    /// Accoutns expected:
+    /// Accounts expected:
     ///
     /// 0. `[signer]` The account of the person initializing the escrow.
     /// 1. `[writable]` Temporary token account that should be created

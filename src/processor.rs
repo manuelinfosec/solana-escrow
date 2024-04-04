@@ -1,12 +1,15 @@
+extern crate spl_token;
+
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
     msg,
     program_error::ProgramError,
     pubkey::Pubkey,
+    sysvar::{rent::Rent, Sysvar},
 };
 
-use crate::instruction::EscrowInstruction;
+use crate::{error::EscrowError, instruction::EscrowInstruction};
 
 pub struct Processor;
 
@@ -39,9 +42,30 @@ impl Processor {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        let temp_account_token = next_account_info(account_info_iter);
+        let temp_account_token: &AccountInfo<'_> = next_account_info(account_info_iter)?;
 
-        let token_to_recieve_account = next_account_info(account_info_iter);
+        let token_to_receive_account: &AccountInfo<'_> = next_account_info(account_info_iter)?;
+
+        // check if account is owned by the token program
+        if *token_to_receive_account.owner != spl_token::id() {
+            return Err(ProgramError::IncorrectProgramId);
+        }
+
+        let escrow_account: &AccountInfo<'_> = next_account_info(account_info_iter)?;
+
+        // collect rent to be paid by the account
+        let rent: Rent = Rent::from_account_info(next_account_info(account_info_iter)?)?;
+
+        // if account is not rent exempted
+        if !rent.is_exempt(escrow_account.lamports(), escrow_account.data_len()) {
+            return Err(EscrowError::NotRentExempt.into());
+        }
+
+        // Deserialize data from in the escrow account [u8]
+        let mut escrow_info = Escrow::unpack_unchecked(&escrow_account.try_borrow_data()?)?;
+        if escrow_info.is_initialized() {
+            return Err(ProgramError::AccountAlreadyInitialized);
+        }
 
         Ok(())
     }
