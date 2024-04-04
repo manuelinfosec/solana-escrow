@@ -9,6 +9,7 @@ publish = false
 solana-program = "=1.18.9"
 thiserror = "1.0.24"
 spl-token = { version = "3.2.0", features = ["no-entrypoint"]}
+arrayref = "0.3.6"
 
 [features]
 test-bpf = []
