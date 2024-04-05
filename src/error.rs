@@ -10,6 +10,7 @@ pub enum EscrowError {
     NotRentExempt,
 }
 
+// function should return user-defined error for `.into()`
 impl From<EscrowError> for ProgramError {
     fn from(e: EscrowError) -> Self {
         ProgramError::Custom(e as u32)

@@ -27,8 +27,10 @@ pub enum EscrowInstruction {
 impl EscrowInstruction {
     /// Unpacks a byte buffer into a [EscrowInstruction]
     pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
+        // collect instruction as first item in the array
         let (tag, rest) = input.split_first().ok_or(InvalidInstruction)?;
 
+        // match instruction and pass `rest` as instruction data
         Ok(match tag {
             0 => Self::InitEscrow {
                 amount: Self::unpack_amount(rest)?,

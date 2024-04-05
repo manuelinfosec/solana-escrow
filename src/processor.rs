@@ -1,5 +1,7 @@
 extern crate spl_token;
 
+use std::slice::Iter;
+
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
@@ -34,24 +36,26 @@ impl Processor {
         amount: u64,
         program_id: &Pubkey,
     ) -> ProgramResult {
-        let account_info_iter = &mut accounts.iter();
-        let initializer = next_account_info(account_info_iter)?;
+        let account_info_iter: &mut Iter<'_, AccountInfo> = &mut accounts.iter();
+        let initializer: &AccountInfo = next_account_info(account_info_iter)?;
 
         // initializer of the escrow has to sign the transaction
         if !initializer.is_signer {
             return Err(ProgramError::MissingRequiredSignature);
         }
 
-        let temp_account_token: &AccountInfo<'_> = next_account_info(account_info_iter)?;
+        // X account where init'er sends tokens to exchange
+        let temp_account_token: &AccountInfo = next_account_info(account_info_iter)?;
 
-        let token_to_receive_account: &AccountInfo<'_> = next_account_info(account_info_iter)?;
+        // Y account where taker sends tokens
+        let token_to_receive_account: &AccountInfo = next_account_info(account_info_iter)?;
 
         // check if account is owned by the token program
         if *token_to_receive_account.owner != spl_token::id() {
             return Err(ProgramError::IncorrectProgramId);
         }
 
-        let escrow_account: &AccountInfo<'_> = next_account_info(account_info_iter)?;
+        let escrow_account: &AccountInfo = next_account_info(account_info_iter)?;
 
         // collect rent to be paid by the account
         let rent: Rent = Rent::from_account_info(next_account_info(account_info_iter)?)?;
