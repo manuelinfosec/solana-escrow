@@ -7,6 +7,7 @@ use solana_program::{
     entrypoint::ProgramResult,
     msg,
     program_error::ProgramError,
+    program_pack::{IsInitialized, Pack},
     pubkey::Pubkey,
     sysvar::{rent::Rent, Sysvar},
 };
@@ -66,10 +67,19 @@ impl Processor {
         }
 
         // Deserialize data from in the escrow account [u8]
-        let mut escrow_info = Escrow::unpack_unchecked(&escrow_account.try_borrow_data()?)?;
+        let mut escrow_info: Escrow = Escrow::unpack_unchecked(&escrow_account.try_borrow_data()?)?;
         if escrow_info.is_initialized() {
             return Err(ProgramError::AccountAlreadyInitialized);
         }
+
+        escrow_info.is_initialized = true;
+        escrow_info.initializer_pubkey = *initializer.key;
+        escrow_info.temp_token_account_pubkey = *temp_account_token.key;
+        escrow_info.initializer_token_to_receive_account_pubkey = *token_to_receive_account.key;
+        escrow_info.expected_amount = amount;
+
+        Escrow::pack(escrow_info, &mut escrow_account.try_borrow_mut_data()?)?;
+        
 
         Ok(())
     }

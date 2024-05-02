@@ -8,7 +8,7 @@ use arrayref::{array_mut_ref, array_ref, array_refs, mut_array_refs};
 
 pub struct Escrow {
     pub is_initialized: bool,
-    pub initlizer_pubkey: Pubkey,
+    pub initializer_pubkey: Pubkey,
     // send tokens from this account to taker
     pub temp_token_account_pubkey: Pubkey,
     // initializer account to receive token
@@ -54,7 +54,7 @@ impl Pack for Escrow {
         // construct escrow state
         Ok(Escrow {
             is_initialized,
-            initlizer_pubkey: Pubkey::new_from_array(*initializer_pubkey),
+            initializer_pubkey: Pubkey::new_from_array(*initializer_pubkey),
             temp_token_account_pubkey: Pubkey::new_from_array(*temp_token_account_pubkey),
             initializer_token_to_receive_account_pubkey: Pubkey::new_from_array(
                 *initialzer_token_to_receive_account_pubkey,
@@ -63,7 +63,28 @@ impl Pack for Escrow {
         })
     }
 
-    fn pack_into_slice(&self, src: &mut [u8]) {
-        unimplemented!();
+    fn pack_into_slice(&self, dst: &mut [u8]) {
+        let dst: &mut [u8; 105] = array_mut_ref![dst, 0, Escrow::LEN]
+        let (
+            is_initialized_dst,
+            initializer_pubkey_dst,
+            temp_token_account_pubkey_dst,
+            initializer_token_to_receive_account_pubkey_dst,
+            expected_amount_dst
+        ) = mut_array_refs![dst, 1, 32, 32, 32, 8];
+
+        let Escrow {
+            is_initialized,
+            initializer_pubkey,
+            temp_token_account_pubkey,
+            initializer_token_to_receive_account_pubkey,
+            expected_amount
+        } = self;
+
+        is_initialized_dst[0] = *is_initialized as u8;  
+        initializer_pubkey_dst.copy_from_slice(initializer_pubkey.as_ref());
+        temp_token_account_pubkey_dst.copy_from_slice(temp_token_account_pubkey.as_ref());
+        initializer_token_to_receive_account_pubkey_dst.copy_from_slice(initializer_token_to_receive_account_pubkey.as_ref());
+        *expected_amount_dst = expected_amount.to_le_bytes()
     }
 }
