@@ -5,7 +5,9 @@ use std::slice::Iter;
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
     entrypoint::ProgramResult,
+    instruction::Instruction,
     msg,
+    program::invoke,
     program_error::ProgramError,
     program_pack::{IsInitialized, Pack},
     pubkey::Pubkey,
@@ -46,7 +48,7 @@ impl Processor {
         }
 
         // X account where init'er sends tokens to exchange
-        let temp_account_token: &AccountInfo = next_account_info(account_info_iter)?;
+        let temp_token_account: &AccountInfo = next_account_info(account_info_iter)?;
 
         // Y account where taker sends tokens
         let token_to_receive_account: &AccountInfo = next_account_info(account_info_iter)?;
@@ -72,14 +74,42 @@ impl Processor {
             return Err(ProgramError::AccountAlreadyInitialized);
         }
 
+        // state serialization
         escrow_info.is_initialized = true;
         escrow_info.initializer_pubkey = *initializer.key;
-        escrow_info.temp_token_account_pubkey = *temp_account_token.key;
+        escrow_info.temp_token_account_pubkey = *temp_token_account.key;
         escrow_info.initializer_token_to_receive_account_pubkey = *token_to_receive_account.key;
         escrow_info.expected_amount = amount;
-
         Escrow::pack(escrow_info, &mut escrow_account.try_borrow_mut_data()?)?;
-        
+
+        // create a Program Derived Address
+        let (pda, _bump_seed): (Pubkey, u8) =
+            Pubkey::find_program_address(&[b"escrow"], program_id);
+
+        // collect token program account
+        let token_program: &AccountInfo = next_account_info(account_info_iter)?;
+
+        // create account transfer instruction
+        let owner_change_ix: Instruction = spl_token::instruction::set_authority(
+            token_program.key,
+            temp_token_account.key,
+            Some(&pda),
+            spl_token::instruction::AuthorityType::AccountOwner,
+            initializer.key,
+            &[&initializer.key],
+        )?;
+
+        msg!("Calling the token program to transfer token account ownership...");
+
+        // call the token program
+        invoke(
+            &owner_change_ix,
+            &[
+                temp_token_account.clone(),
+                initializer.clone(),
+                token_program.clone(),
+            ],
+        );
 
         Ok(())
     }
